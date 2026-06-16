@@ -33,61 +33,113 @@ useGLTF.preload(TOWER_GLB);
 
 function TowerModel({ theme }: { theme: Theme }) {
   const { scene } = useGLTF(TOWER_GLB);
-  // Clone so React StrictMode / re-mounts never double-add the cached object.
-  // Built front-+Y in Blender → glTF -Z; rotate 180° so the front faces +Z.
   const model = useMemo(() => {
     const c = scene.clone(true);
     c.traverse((o) => {
       o.castShadow = true;
       o.receiveShadow = true;
-    });
-    return c;
-  }, [scene]);
-
-  // Lit windows / crown glow only at night; nearly off in daylight.
-  useEffect(() => {
-    model.traverse((o) => {
-      const any = o as unknown as { material?: THREE.Material | THREE.Material[] };
-      const mats = Array.isArray(any.material) ? any.material : any.material ? [any.material] : [];
+      const mesh = o as unknown as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
+      const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
       mats.forEach((m) => {
         const sm = m as THREE.MeshStandardMaterial & {
-          userData: { base?: number; g?: { metal: number; rough: number; color: THREE.Color }; baseColor?: THREE.Color };
+          userData: { base?: number; basic?: THREE.MeshBasicMaterial };
           emissive: THREE.Color;
+          color: THREE.Color;
+          opacity: number;
+          transparent: boolean;
         };
-        if (sm.emissiveIntensity !== undefined) {
-          if (sm.userData.base === undefined) sm.userData.base = sm.emissiveIntensity;
-          sm.emissiveIntensity = theme === "day" ? sm.userData.base * 0.06 : sm.userData.base;
-        }
-        // Daylight: make the mirror-dark glass a brighter, sky-lit surface.
-        if (sm.name === "glass" && sm.color) {
-          if (!sm.userData.g) sm.userData.g = { metal: sm.metalness, rough: sm.roughness, color: sm.color.clone() };
-          if (theme === "day") {
-            sm.metalness = 0.55;
-            sm.roughness = 0.16;
-            sm.color.setHex(0x3a4d6a);
+        const name = sm.name;
+        // Real-time fallback: the GLB is authored for Blender Cycles (very dark,
+        // AgX-tonemapped) and looks black with no environment map in WebGL.
+        // Replace all structural materials with a high-contrast basic palette.
+        if (!sm.userData.basic) {
+          const basic = new THREE.MeshBasicMaterial({ name, transparent: false, opacity: 1 });
+          if (name === "glass") {
+            basic.color.setHex(theme === "day" ? 0x6a8cb8 : 0x162036);
+            basic.transparent = true;
+            basic.opacity = 0.92;
+          } else if (name === "litA" || name === "litB" || name === "litC") {
+            // lit windows
+            basic.color.copy(sm.emissive || new THREE.Color(0xfff4e6));
+          } else if (name === "crownglow" || name === "beacon") {
+            basic.color.copy(sm.color || new THREE.Color(0xffdca4));
+          } else if (name === "gold" || name === "bollard") {
+            basic.color.setHex(0xc8924a);
+          } else if (name === "lobby") {
+            basic.color.setHex(0xf5e6c8);
+          } else if (name === "slab") {
+            basic.color.setHex(0x2a2f3d);
+          } else if (name === "spandrel") {
+            basic.color.setHex(0x202538);
+          } else if (name === "mullion") {
+            basic.color.setHex(0x1e2333);
+          } else if (name === "metal") {
+            basic.color.setHex(0x3a4050);
+          } else if (name === "stone") {
+            basic.color.setHex(0x4b5060);
+          } else if (name === "plant") {
+            basic.color.setHex(0x1a2e1a);
+          } else if (name === "trunk") {
+            basic.color.setHex(0x3d2f20);
+          } else if (name === "water") {
+            basic.color.setHex(0x0f1724);
           } else {
-            sm.metalness = sm.userData.g.metal;
-            sm.roughness = sm.userData.g.rough;
-            sm.color.copy(sm.userData.g.color);
+            basic.color.copy(sm.color || new THREE.Color(0x333333));
           }
+          sm.userData.basic = basic;
         }
-        // Slightly brighten non-glass structural materials at night so the
-        // building form reads against the sky instead of disappearing.
-        // Skip materials that already emit their own light.
-        const hasEmissive = sm.emissive && (sm.emissive.r || sm.emissive.g || sm.emissive.b);
-        if (sm.name !== "glass" && sm.color && !hasEmissive) {
-          if (sm.userData.baseColor === undefined) sm.userData.baseColor = sm.color.clone();
-          const base = sm.userData.baseColor;
-          if (theme === "night") {
-            sm.color.setRGB(
-              Math.min(1, base.r * 1.35),
-              Math.min(1, base.g * 1.35),
-              Math.min(1, base.b * 1.45),
-            );
-          } else {
-            sm.color.copy(base);
-          }
+      });
+    });
+    return c;
+  }, [scene, theme]);
+
+  useEffect(() => {
+    const isDay = theme === "day";
+    model.traverse((o) => {
+      const mesh = o as unknown as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
+      const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+      mats.forEach((m) => {
+        const sm = m as THREE.MeshStandardMaterial & {
+          userData: { base?: number; basic?: THREE.MeshBasicMaterial };
+          emissive: THREE.Color;
+          color: THREE.Color;
+        };
+        if (!sm.userData.basic) return;
+        const basic = sm.userData.basic;
+        const name = sm.name;
+        if (name === "glass") {
+          basic.color.setHex(isDay ? 0x6a8cb8 : 0x162036);
+        } else if (name === "litA") {
+          basic.color.setHex(isDay ? 0x2a2522 : 0xffd6ac);
+        } else if (name === "litB") {
+          basic.color.setHex(isDay ? 0x2a2522 : 0xffe8c8);
+        } else if (name === "litC") {
+          basic.color.setHex(isDay ? 0x1c2028 : 0xc8dcff);
+        } else if (name === "crownglow" || name === "beacon") {
+          basic.color.setHex(isDay ? 0x5a4a30 : 0xffddaa);
+        } else if (name === "lobby") {
+          basic.color.setHex(isDay ? 0xd8d0c0 : 0xfff0d0);
+        } else if (name === "gold" || name === "bollard") {
+          basic.color.setHex(isDay ? 0xa4763a : 0xc8924a);
+        } else if (name === "slab") {
+          basic.color.setHex(isDay ? 0x5a6378 : 0x2a2f3d);
+        } else if (name === "spandrel") {
+          basic.color.setHex(isDay ? 0x4a5468 : 0x202538);
+        } else if (name === "mullion") {
+          basic.color.setHex(isDay ? 0x3f4758 : 0x1e2333);
+        } else if (name === "metal") {
+          basic.color.setHex(isDay ? 0x6a7285 : 0x3a4050);
+        } else if (name === "stone") {
+          basic.color.setHex(isDay ? 0x7a8092 : 0x4b5060);
+        } else if (name === "plant") {
+          basic.color.setHex(isDay ? 0x2a4a2a : 0x1a2e1a);
+        } else if (name === "trunk") {
+          basic.color.setHex(isDay ? 0x5c4a36 : 0x3d2f20);
+        } else if (name === "water") {
+          basic.color.setHex(isDay ? 0x1c2f48 : 0x0f1724);
         }
+        // Apply the basic material on this mesh.
+        (mesh.material as THREE.Material) = basic;
       });
     });
   }, [model, theme]);
@@ -288,13 +340,13 @@ export default function TowerScene({
       {day && <Sky sunPosition={[80, 26, 40]} turbidity={6} rayleigh={2} mieCoefficient={0.01} mieDirectionalG={0.8} />}
       <CityBackdrop theme={theme} />
 
-      <ambientLight intensity={day ? 1.3 : 0.85} color={day ? "#cfe0ff" : "#7b8cb8"} />
-      <hemisphereLight args={day ? ["#cfe0ff", "#6b6253", 1.2] : ["#5a6a9a", "#1a1a24", 0.85]} />
+      <ambientLight intensity={day ? 1.6 : 1.2} color={day ? "#cfe0ff" : "#9fb0d8"} />
+      <hemisphereLight args={day ? ["#cfe0ff", "#6b6253", 1.5] : ["#8fa6d8", "#2a2a35", 1.35]} />
       {/* Key light — warm, low from the front-right to rake across the tower face */}
       <directionalLight
-        position={day ? [40, 55, 45] : [18, 22, 38]}
-        intensity={day ? 3.6 : 2.4}
-        color={day ? "#fff3df" : "#ffd9a0"}
+        position={day ? [40, 55, 45] : [22, 28, 42]}
+        intensity={day ? 3.6 : 4.5}
+        color={day ? "#fff3df" : "#ffe0b0"}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={1}
@@ -305,13 +357,13 @@ export default function TowerScene({
         shadow-camera-bottom={-10}
       />
       {/* Cool rim light from behind/above-left to silhouette edges */}
-      <directionalLight position={[-28, 42, -24]} intensity={day ? 0.9 : 1.8} color="#aab8de" />
+      <directionalLight position={[-28, 42, -24]} intensity={day ? 0.9 : 2.2} color="#cbd6f7" />
       {/* Architectural accent spots on the facade */}
-      <spotLight position={[0, 6, 24]} angle={0.55} penumbra={0.8} intensity={day ? 0.25 : 1.4} color="#cdb088" distance={60} />
-      <spotLight position={[8, 14, 22]} angle={0.45} penumbra={0.9} intensity={day ? 0.2 : 1.1} color="#e6d3b3" distance={55} />
-      <spotLight position={[-8, 14, 22]} angle={0.45} penumbra={0.9} intensity={day ? 0.2 : 1.1} color="#e6d3b3" distance={55} />
+      <spotLight position={[0, 6, 24]} angle={0.55} penumbra={0.8} intensity={day ? 0.25 : 2.2} color="#cdb088" distance={60} />
+      <spotLight position={[8, 14, 22]} angle={0.45} penumbra={0.9} intensity={day ? 0.2 : 1.8} color="#e6d3b3" distance={55} />
+      <spotLight position={[-8, 14, 22]} angle={0.45} penumbra={0.9} intensity={day ? 0.2 : 1.8} color="#e6d3b3" distance={55} />
       {/* Ground wash */}
-      <spotLight position={[0, 0.8, 16]} angle={0.9} penumbra={1} intensity={day ? 0.3 : 1.2} color="#8fa6d8" distance={55} />
+      <spotLight position={[0, 0.8, 16]} angle={0.9} penumbra={1} intensity={day ? 0.3 : 1.8} color="#8fa6d8" distance={55} />
 
       <Suspense fallback={null}>
         <TowerModel theme={theme} />
@@ -322,8 +374,8 @@ export default function TowerScene({
 
       <EffectComposer>
         <Bloom
-          intensity={day ? 0.35 : 1.25}
-          luminanceThreshold={day ? 0.72 : 0.22}
+          intensity={day ? 0.35 : 1.6}
+          luminanceThreshold={day ? 0.72 : 0.18}
           luminanceSmoothing={0.9}
           mipmapBlur
           radius={0.85}
