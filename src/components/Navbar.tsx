@@ -18,6 +18,8 @@ export default function Navbar({
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const isDay = theme === "day";
+  const themeLabel = isDay ? "夜に切り替え" : "昼に切り替え";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -66,8 +68,8 @@ export default function Navbar({
             onClick={onToggleTheme}
             className="liquid-glass animate-blur-fade-up flex h-10 items-center gap-2 rounded-full px-4 text-sm text-white"
             style={{ animationDelay: "320ms" }}
-            aria-label={theme === "night" ? "昼に切り替え" : "夜に切り替え"}
-            title={theme === "night" ? "昼に切り替え" : "夜に切り替え"}
+            aria-label={themeLabel}
+            title={themeLabel}
           >
             {theme === "night" ? <Sun size={16} className="text-[#e6d3b3]" /> : <Moon size={16} className="text-[#cdb088]" />}
             <span className="hidden sm:inline">{theme === "night" ? "DAY" : "NIGHT"}</span>

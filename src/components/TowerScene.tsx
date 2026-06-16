@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, Sky } from "@react-three/drei";
+import { Html, useGLTF } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -151,8 +151,8 @@ function SceneEnv({ theme }: { theme: Theme }) {
   const { scene } = useThree();
   useEffect(() => {
     if (theme === "day") {
-      scene.background = new THREE.Color("#adc6e2");
-      scene.fog = new THREE.FogExp2("#bcd2ea", 0.0042);
+      scene.background = new THREE.Color("#6a7a94");
+      scene.fog = new THREE.FogExp2("#8fa0b8", 0.0042);
     } else {
       scene.background = new THREE.Color("#070710");
       scene.fog = new THREE.FogExp2("#070710", 0.006);
@@ -337,7 +337,6 @@ export default function TowerScene({
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
     >
       <SceneEnv theme={theme} />
-      {day && <Sky sunPosition={[80, 26, 40]} turbidity={6} rayleigh={2} mieCoefficient={0.01} mieDirectionalG={0.8} />}
       <CityBackdrop theme={theme} />
 
       <ambientLight intensity={day ? 1.6 : 1.2} color={day ? "#cfe0ff" : "#9fb0d8"} />
