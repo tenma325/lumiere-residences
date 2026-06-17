@@ -82,6 +82,11 @@ export default function InteriorViewer({
         {src ? <PanoramaCanvas src={src} /> : null}
       </div>
 
+      {/* cinematic vignette + gradient overlays for depth and legibility */}
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)" }} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
       {/* ---- overlay UI ---- */}
       <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6 md:p-8">
         {/* top bar */}
@@ -90,10 +95,10 @@ export default function InteriorViewer({
             <div className="flex items-center gap-2 text-[11px] tracking-[0.4em] text-[#cdb088]">
               <Move3d size={14} /> 実写3Dビュー ・ {vp ? vp.label : ""}
             </div>
-            <h2 className="mt-2 font-mincho text-2xl text-white sm:text-3xl">
+            <h2 className="mt-2.5 font-mincho text-2xl text-white sm:text-3xl">
               Residence&nbsp;{unit.residenceNo}
             </h2>
-            <p className="mt-1 text-sm text-white/55">
+            <p className="mt-1.5 text-sm text-white/55">
               {unit.layout}・{plan.name}・{unit.areaM2}m²
             </p>
           </div>
@@ -121,16 +126,16 @@ export default function InteriorViewer({
 
         {/* viewpoint chips (jump between rooms) */}
         {viewpoints.length > 1 && (
-          <div className="animate-blur-fade-up pointer-events-auto mx-auto flex gap-2">
+          <div className="animate-blur-fade-up pointer-events-auto mx-auto flex gap-2.5">
             {viewpoints.map((v, i) => (
               <button
                 key={v.room}
                 type="button"
                 onClick={() => setVpIndex(i)}
-                className={`rounded-full px-5 py-2 text-sm transition-all ${
+                className={`rounded-full px-6 py-2.5 text-sm tracking-wide transition-all duration-300 ${
                   i === vpIndex
-                    ? "bg-[#e6d3b3] text-black"
-                    : "liquid-glass text-white/85"
+                    ? "bg-[#e6d3b3] text-black shadow-[0_4px_24px_-6px_rgba(230,211,179,0.5)]"
+                    : "liquid-glass text-white/85 hover:text-white"
                 }`}
               >
                 {v.label}
@@ -141,18 +146,18 @@ export default function InteriorViewer({
 
         {/* center hint */}
         <div
-          className={`mx-auto mb-1 flex items-center gap-3 text-xs text-white/70 transition-opacity duration-1000 ${
+          className={`mx-auto mb-2 flex items-center gap-3 text-xs text-white/60 transition-opacity duration-1000 ${
             !hintGone ? "opacity-100" : "opacity-0"
           }`}
         >
-          <span className="liquid-glass rounded-full px-4 py-2">ドラッグで見回す</span>
-          <span className="liquid-glass rounded-full px-4 py-2">間取りの部屋をクリックで移動</span>
+          <span className="liquid-glass rounded-full px-4 py-2 tracking-wide">ドラッグで見回す</span>
+          <span className="liquid-glass rounded-full px-4 py-2 tracking-wide">間取りの部屋をクリックで移動</span>
         </div>
 
         {/* bottom row: specs + interactive floor plan */}
         <div className="flex items-end justify-between gap-4">
-          <div className="glass-panel animate-blur-fade-up rounded-2xl px-5 py-4 sm:px-7 sm:py-5">
-            <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+          <div className="glass-panel animate-blur-fade-up rounded-2xl px-6 py-5 sm:px-8 sm:py-6">
+            <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
               {[
                 ["間取り", unit.layout],
                 ["専有面積", `${unit.areaM2} m²`],
@@ -161,12 +166,12 @@ export default function InteriorViewer({
               ].map(([k, v]) => (
                 <div key={k}>
                   <div className="text-[10px] tracking-[0.3em] text-white/40">{k}</div>
-                  <div className="mt-1 font-mincho text-lg text-white">{v}</div>
+                  <div className="mt-1.5 font-mincho text-lg text-white">{v}</div>
                 </div>
               ))}
               <div>
                 <div className="text-[10px] tracking-[0.3em] text-[#cdb088]/70">価格</div>
-                <div className="mt-1 font-mincho text-xl text-[#e6d3b3]">
+                <div className="mt-1.5 font-mincho text-xl text-[#e6d3b3]">
                   {formatPrice(unit.priceOku)}
                 </div>
               </div>

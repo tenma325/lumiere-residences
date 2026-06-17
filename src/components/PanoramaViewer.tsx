@@ -44,7 +44,7 @@ function Photosphere({ src }: { src: string }) {
   if (!tex) return null;
   return (
     <mesh rotation={[0, Math.PI * 0.667, 0]}>
-      <sphereGeometry args={[50, 80, 48]} />
+      <sphereGeometry args={[50, 128, 96]} />
       {/* JPEG is already AgX-tonemapped in Blender → show it raw */}
       <meshBasicMaterial map={tex} side={THREE.BackSide} toneMapped={false} />
     </mesh>
@@ -60,9 +60,9 @@ export default function PanoramaCanvas({ src }: { src: string }) {
   const controls = useRef<any>(null);
   return (
     <Canvas
-      camera={{ fov: 75, position: [0, 0, 0.1], near: 0.01, far: 100 }}
+      camera={{ fov: 72, position: [0, 0, 0.1], near: 0.01, far: 100 }}
       dpr={[1, 2]}
-      gl={{ antialias: true }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.08 }}
     >
       <Photosphere src={src} />
       <OrbitControls
@@ -76,13 +76,13 @@ export default function PanoramaCanvas({ src }: { src: string }) {
         enableDamping
         dampingFactor={0.08}
         autoRotate={!reduced}
-        autoRotateSpeed={0.28}
+        autoRotateSpeed={0.22}
         onStart={() => {
           if (controls.current) controls.current.autoRotate = false;
         }}
       />
       <EffectComposer>
-        <Bloom intensity={0.45} luminanceThreshold={0.82} luminanceSmoothing={0.9} mipmapBlur radius={0.6} />
+        <Bloom intensity={0.28} luminanceThreshold={0.85} luminanceSmoothing={0.92} mipmapBlur radius={0.5} />
       </EffectComposer>
     </Canvas>
   );
