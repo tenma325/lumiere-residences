@@ -78,7 +78,9 @@ export default function InteriorViewer({
     >
       {/* photo-sphere — one persistent canvas; the texture swaps in place when
           the viewpoint / theme changes (avoids WebGL-context churn). */}
-      {src ? <PanoramaCanvas src={src} /> : null}
+      <div className="absolute inset-0">
+        {src ? <PanoramaCanvas src={src} /> : null}
+      </div>
 
       {/* ---- overlay UI ---- */}
       <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6 md:p-8">
