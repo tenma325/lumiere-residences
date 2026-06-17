@@ -5,9 +5,11 @@ import Reveal from "./Reveal";
 export default function ResidencesSection({
   units,
   onSelect,
+  selectedUnit,
 }: {
   units: Unit[];
   onSelect: (u: Unit) => void;
+  selectedUnit: Unit | null;
 }) {
   const availableCount = units.filter((u) => u.status === "available").length;
 
@@ -35,7 +37,7 @@ export default function ResidencesSection({
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {units.map((u, i) => (
           <Reveal key={u.id} delay={(i % 3) * 90}>
-            <UnitCard unit={u} onSelect={onSelect} />
+            <UnitCard unit={u} onSelect={onSelect} selectedUnit={selectedUnit} />
           </Reveal>
         ))}
       </div>

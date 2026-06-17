@@ -16,13 +16,16 @@ const STATUS: Record<
 export default function UnitCard({
   unit,
   onSelect,
+  selectedUnit,
 }: {
   unit: Unit;
   onSelect: (u: Unit) => void;
+  selectedUnit: Unit | null;
 }) {
   const plan = PLANS[unit.planId];
   const st = STATUS[unit.status];
   const available = unit.status === "available";
+  const isSelected = selectedUnit?.id === unit.id;
 
   return (
     <div
@@ -47,33 +50,38 @@ export default function UnitCard({
         </span>
       </div>
 
-      {/* floor plan */}
-      <button
-        type="button"
-        disabled={!available}
-        onClick={() => available && onSelect(unit)}
-        className={`relative mt-5 overflow-hidden rounded-2xl border border-white/5 bg-black/30 p-2 ${
-          available ? "cursor-pointer" : "cursor-default"
-        }`}
-        aria-label={`${unit.residenceNo} の間取りを3Dで内覧`}
+      {/* floor plan — the plan itself is the click target (calls selectUnit,
+          same flow as clicking a 3D tower marker) and highlights when selected.
+          Individual rooms are also clickable hotspots (clickableRooms + onRoomClick). */}
+      <div
+        className={`relative mt-5 overflow-hidden rounded-2xl border bg-black/30 p-2 ${
+          isSelected ? "border-[#cdb088]/70" : "border-white/5"
+        } ${available ? "cursor-pointer" : "cursor-default"}`}
       >
-        <FloorPlan plan={plan} className="h-44 w-full sm:h-52" />
+        <FloorPlan
+          plan={plan}
+          className="h-44 w-full sm:h-52"
+          selected={isSelected}
+          onSelect={available ? () => onSelect(unit) : undefined}
+          clickableRooms={available ? plan.rooms.map((r) => r.id) : undefined}
+          onRoomClick={available ? () => onSelect(unit) : undefined}
+        />
         {available && (
-          <div className="absolute inset-0 flex items-center justify-center bg-obsidian/55 opacity-0 backdrop-blur-sm transition-opacity duration-500 group-hover:opacity-100">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-obsidian/55 opacity-0 backdrop-blur-sm transition-opacity duration-500 group-hover:opacity-100">
             <span className="flex items-center gap-2 rounded-full border border-[#cdb088]/60 bg-black/60 px-4 py-2 text-sm text-[#e6d3b3]">
               <Box size={15} /> 3Dで内覧する
             </span>
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] tracking-[0.25em] text-white/55">
+        <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] tracking-[0.25em] text-white/55">
           {plan.name}
         </span>
         {available && (
-          <span className="absolute right-3 top-3 rounded-full border border-[#cdb088]/50 bg-black/60 px-2.5 py-1 text-[10px] tracking-[0.2em] text-[#e6d3b3]">
+          <span className="pointer-events-none absolute right-3 top-3 rounded-full border border-[#cdb088]/50 bg-black/60 px-2.5 py-1 text-[10px] tracking-[0.2em] text-[#e6d3b3]">
             実写3D
           </span>
         )}
-      </button>
+      </div>
 
       {/* specs */}
       <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/5 pt-5 text-sm">

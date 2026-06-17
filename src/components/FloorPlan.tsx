@@ -14,6 +14,14 @@ interface Props {
   /** Room ids that can be clicked to jump to that viewpoint. */
   clickableRooms?: string[];
   onRoomClick?: (roomId: string) => void;
+  /**
+   * Unit-level selection (used by UnitCard). When provided, the entire plan
+   * becomes a click target that calls this handler — triggering the same
+   * selectUnit flow as clicking a 3D tower marker (camera fly + interior).
+   */
+  onSelect?: () => void;
+  /** Whether this plan's unit is the currently selected one (highlight ring). */
+  selected?: boolean;
 }
 
 const C_EXT = "#cdb088"; // exterior wall (champagne)
@@ -238,10 +246,17 @@ export default function FloorPlan({
   highlightRoom,
   clickableRooms,
   onRoomClick,
+  onSelect,
+  selected = false,
 }: Props) {
   const walls = useMemo(() => buildWalls(plan), [plan]);
   const pad = 0.9;
   const vb = `${-pad} ${-pad} ${plan.widthM + pad * 2} ${plan.depthM + pad * 2}`;
+  // Plan bounds (metres) used for the selection ring + click target overlay.
+  const bx = -0.2;
+  const by = -0.2;
+  const bw = plan.widthM + 0.4;
+  const bh = plan.depthM + 0.4;
 
   return (
     <svg viewBox={vb} className={className} preserveAspectRatio="xMidYMid meet" role="img"
@@ -348,6 +363,60 @@ export default function FloorPlan({
         <text x={0} y={0.85} fontSize={0.32} fill={C_EXT} textAnchor="middle"
           style={{ fontFamily: "Inter, sans-serif" }}>N</text>
       </g>
+
+      {/* selected-unit highlight ring (champagne glow) */}
+      {selected && (
+        <g pointerEvents="none">
+          <rect
+            x={bx - 0.06}
+            y={by - 0.06}
+            width={bw + 0.12}
+            height={bh + 0.12}
+            rx={0.12}
+            fill="none"
+            stroke="#e6d3b3"
+            strokeWidth={0.22}
+            opacity={0.22}
+          />
+          <rect
+            x={bx}
+            y={by}
+            width={bw}
+            height={bh}
+            rx={0.1}
+            fill="none"
+            stroke="#cdb088"
+            strokeWidth={0.09}
+            opacity={0.95}
+          />
+        </g>
+      )}
+
+      {/* unit-level click target: makes the whole plan a button that triggers
+          the same selectUnit flow as clicking a 3D tower marker. Rendered last
+          so it sits above all other shapes and captures pointer events. */}
+      {onSelect && (
+        <rect
+          x={-pad}
+          y={-pad}
+          width={plan.widthM + pad * 2}
+          height={plan.depthM + pad * 2}
+          fill="rgba(205,176,136,0.001)"
+          style={{ cursor: "pointer" }}
+          onClick={onSelect}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onSelect();
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-label={`${plan.name} を3Dで内覧する`}
+        >
+          <title>{plan.name} を3Dで内覧する</title>
+        </rect>
+      )}
     </svg>
   );
 }

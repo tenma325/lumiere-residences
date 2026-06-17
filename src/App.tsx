@@ -57,7 +57,7 @@ export default function App() {
 
       <main className="relative z-10 bg-obsidian">
         <ConceptSection />
-        <ResidencesSection units={UNITS} onSelect={selectUnit} />
+        <ResidencesSection units={UNITS} onSelect={selectUnit} selectedUnit={selected} />
         <AmenitiesSection />
         <AccessSection />
         <ContactFooter />

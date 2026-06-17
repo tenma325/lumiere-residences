@@ -63,6 +63,28 @@ export default function InteriorViewer({
     };
   }, [onClose]);
 
+  // Explicit WebGL cleanup on unmount. R3F disposes its renderer automatically,
+  // but on some browsers the context is only reclaimed lazily by GC, which can
+  // surface as a "WebGL Context Lost" warning when the viewer is reopened.
+  // Forcing the context loss here releases GPU memory promptly and
+  // deterministically so reopening is clean.
+  useEffect(() => {
+    const root = dialogRef.current;
+    return () => {
+      if (!root) return;
+      root.querySelectorAll<HTMLCanvasElement>("canvas").forEach((c) => {
+        for (const type of ["webgl2", "webgl", "experimental-webgl"] as const) {
+          const ctx = c.getContext(type) as WebGLRenderingContext | null;
+          if (ctx) {
+            const ext = ctx.getExtension("WEBGL_lose_context");
+            ext?.loseContext();
+            break;
+          }
+        }
+      });
+    };
+  }, []);
+
   const jumpToRoom = (roomId: string) => {
     const i = viewpoints.findIndex((v) => v.roomId === roomId);
     if (i >= 0) setVpIndex(i);
@@ -79,13 +101,15 @@ export default function InteriorViewer({
       {/* photo-sphere — one persistent canvas; the texture swaps in place when
           the viewpoint / theme changes (avoids WebGL-context churn). */}
       <div className="absolute inset-0">
-        {src ? <PanoramaCanvas src={src} /> : null}
+        {src ? <PanoramaCanvas src={src} theme={theme} /> : null}
       </div>
 
-      {/* cinematic vignette + gradient overlays for depth and legibility */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)" }} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      {/* cinematic vignette + gradient overlays for depth and legibility.
+          Kept lighter than before so the interior photo reads clearly while
+          still anchoring the overlay UI text against the edges. */}
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.28) 100%)", }} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/55 via-black/15 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/65 via-black/22 to-transparent" />
 
       {/* ---- overlay UI ---- */}
       <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6 md:p-8">
