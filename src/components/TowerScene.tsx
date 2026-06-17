@@ -28,7 +28,7 @@ function unitWorld(u: Unit): THREE.Vector3 {
   return new THREE.Vector3(x, floorY(u.floor), bodyD / 2 + 0.45);
 }
 
-const TOWER_GLB = "/models/tower.glb";
+const TOWER_GLB = `${import.meta.env.BASE_URL}models/tower.glb`;
 useGLTF.preload(TOWER_GLB);
 
 function TowerModel({ theme }: { theme: Theme }) {

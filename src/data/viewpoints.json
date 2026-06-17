@@ -6,8 +6,8 @@
       "label": "リビング",
       "x": 9.141,
       "z": 6.441,
-      "day": "/panoramas/A_ldk_day.jpg",
-      "night": "/panoramas/A_ldk_night.jpg"
+      "day": "panoramas/A_ldk_day.jpg",
+      "night": "panoramas/A_ldk_night.jpg"
     },
     {
       "room": "bed",
@@ -15,8 +15,8 @@
       "label": "ベッドルーム",
       "x": 1.586,
       "z": 6.627,
-      "day": "/panoramas/A_bed_day.jpg",
-      "night": "/panoramas/A_bed_night.jpg"
+      "day": "panoramas/A_bed_day.jpg",
+      "night": "panoramas/A_bed_night.jpg"
     }
   ],
   "B": [
@@ -26,8 +26,8 @@
       "label": "リビング",
       "x": 7.041,
       "z": 5.445,
-      "day": "/panoramas/B_ldk_day.jpg",
-      "night": "/panoramas/B_ldk_night.jpg"
+      "day": "panoramas/B_ldk_day.jpg",
+      "night": "panoramas/B_ldk_night.jpg"
     },
     {
       "room": "bed",
@@ -35,8 +35,8 @@
       "label": "ベッドルーム",
       "x": 1.382,
       "z": 5.882,
-      "day": "/panoramas/B_bed_day.jpg",
-      "night": "/panoramas/B_bed_night.jpg"
+      "day": "panoramas/B_bed_day.jpg",
+      "night": "panoramas/B_bed_night.jpg"
     }
   ],
   "C": [
@@ -46,8 +46,8 @@
       "label": "リビング",
       "x": 4.05,
       "z": 4.7,
-      "day": "/panoramas/C_ldk_day.jpg",
-      "night": "/panoramas/C_ldk_night.jpg"
+      "day": "panoramas/C_ldk_day.jpg",
+      "night": "panoramas/C_ldk_night.jpg"
     },
     {
       "room": "bed",
@@ -55,8 +55,8 @@
       "label": "ベッドルーム",
       "x": 1.173,
       "z": 1.223,
-      "day": "/panoramas/C_bed_day.jpg",
-      "night": "/panoramas/C_bed_night.jpg"
+      "day": "panoramas/C_bed_day.jpg",
+      "night": "panoramas/C_bed_night.jpg"
     }
   ]
 }
