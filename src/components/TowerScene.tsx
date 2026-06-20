@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { Environment, Html, Lightformer, useGLTF } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -29,6 +29,8 @@ function unitWorld(u: Unit): THREE.Vector3 {
 }
 
 const TOWER_GLB = `${import.meta.env.BASE_URL}models/tower.glb`;
+const SKY_DAY = `${import.meta.env.BASE_URL}sky/day.jpg`;
+const SKY_NIGHT = `${import.meta.env.BASE_URL}sky/night.jpg`;
 useGLTF.preload(TOWER_GLB);
 
 function TowerModel({ theme }: { theme: Theme }) {
@@ -41,57 +43,27 @@ function TowerModel({ theme }: { theme: Theme }) {
       const mesh = o as unknown as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
       const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
       mats.forEach((m) => {
-        const sm = m as THREE.MeshStandardMaterial & {
-          userData: { base?: number; basic?: THREE.MeshBasicMaterial };
-          emissive: THREE.Color;
-          color: THREE.Color;
-          opacity: number;
-          transparent: boolean;
-        };
+        // Keep the GLB's authored PBR materials (MeshStandardMaterial / MeshPhysicalMaterial
+        // with clearcoat, transmission, ior, emissive). Only tune envMapIntensity per role
+        // so IBL reflections read correctly on glass / gold / water vs. matte concrete.
+        const sm = m as THREE.MeshStandardMaterial;
+        if (!("envMapIntensity" in sm)) return;
         const name = sm.name;
-        // Real-time fallback: the GLB is authored for Blender Cycles (very dark,
-        // AgX-tonemapped) and looks black with no environment map in WebGL.
-        // Replace all structural materials with a high-contrast basic palette.
-        if (!sm.userData.basic) {
-          const basic = new THREE.MeshBasicMaterial({ name, transparent: false, opacity: 1 });
-          if (name === "glass") {
-            basic.color.setHex(theme === "day" ? 0x6a8cb8 : 0x162036);
-            basic.transparent = true;
-            basic.opacity = 0.92;
-          } else if (name === "litA" || name === "litB" || name === "litC") {
-            // lit windows
-            basic.color.copy(sm.emissive || new THREE.Color(0xfff4e6));
-          } else if (name === "crownglow" || name === "beacon") {
-            basic.color.copy(sm.color || new THREE.Color(0xffdca4));
-          } else if (name === "gold" || name === "bollard") {
-            basic.color.setHex(0xc8924a);
-          } else if (name === "lobby") {
-            basic.color.setHex(0xf5e6c8);
-          } else if (name === "slab") {
-            basic.color.setHex(0x2a2f3d);
-          } else if (name === "spandrel") {
-            basic.color.setHex(0x202538);
-          } else if (name === "mullion") {
-            basic.color.setHex(0x1e2333);
-          } else if (name === "metal") {
-            basic.color.setHex(0x3a4050);
-          } else if (name === "stone") {
-            basic.color.setHex(0x4b5060);
-          } else if (name === "plant") {
-            basic.color.setHex(0x1a2e1a);
-          } else if (name === "trunk") {
-            basic.color.setHex(0x3d2f20);
-          } else if (name === "water") {
-            basic.color.setHex(0x0f1724);
-          } else {
-            basic.color.copy(sm.color || new THREE.Color(0x333333));
-          }
-          sm.userData.basic = basic;
+        if (name === "glass" || name === "water") {
+          sm.envMapIntensity = 1.6;
+        } else if (name === "gold" || name === "bollard") {
+          sm.envMapIntensity = 1.8;
+        } else if (name === "mullion" || name === "metal" || name === "spandrel") {
+          sm.envMapIntensity = 1.1;
+        } else if (name === "lobby") {
+          sm.envMapIntensity = 1.3;
+        } else {
+          sm.envMapIntensity = 0.7;
         }
       });
     });
     return c;
-  }, [scene, theme]);
+  }, [scene]);
 
   useEffect(() => {
     const isDay = theme === "day";
@@ -99,47 +71,29 @@ function TowerModel({ theme }: { theme: Theme }) {
       const mesh = o as unknown as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
       const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
       mats.forEach((m) => {
-        const sm = m as THREE.MeshStandardMaterial & {
-          userData: { base?: number; basic?: THREE.MeshBasicMaterial };
-          emissive: THREE.Color;
-          color: THREE.Color;
-        };
-        if (!sm.userData.basic) return;
-        const basic = sm.userData.basic;
+        const sm = m as THREE.MeshStandardMaterial & { emissiveIntensity?: number };
         const name = sm.name;
-        if (name === "glass") {
-          basic.color.setHex(isDay ? 0x6a8cb8 : 0x162036);
-        } else if (name === "litA") {
-          basic.color.setHex(isDay ? 0x2a2522 : 0xffd6ac);
+        // Theme-driven PBR tuning — no material replacement.
+        // Lit windows / crown glow / beacons glow at night, dim by day.
+        if (name === "litA") {
+          sm.emissiveIntensity = isDay ? 0.05 : 2.4;
         } else if (name === "litB") {
-          basic.color.setHex(isDay ? 0x2a2522 : 0xffe8c8);
+          sm.emissiveIntensity = isDay ? 0.05 : 2.8;
         } else if (name === "litC") {
-          basic.color.setHex(isDay ? 0x1c2028 : 0xc8dcff);
+          sm.emissiveIntensity = isDay ? 0.04 : 2.2;
         } else if (name === "crownglow" || name === "beacon") {
-          basic.color.setHex(isDay ? 0x5a4a30 : 0xffddaa);
+          sm.emissiveIntensity = isDay ? 0.15 : 3.2;
         } else if (name === "lobby") {
-          basic.color.setHex(isDay ? 0xd8d0c0 : 0xfff0d0);
-        } else if (name === "gold" || name === "bollard") {
-          basic.color.setHex(isDay ? 0xa4763a : 0xc8924a);
-        } else if (name === "slab") {
-          basic.color.setHex(isDay ? 0x5a6378 : 0x2a2f3d);
-        } else if (name === "spandrel") {
-          basic.color.setHex(isDay ? 0x4a5468 : 0x202538);
-        } else if (name === "mullion") {
-          basic.color.setHex(isDay ? 0x3f4758 : 0x1e2333);
-        } else if (name === "metal") {
-          basic.color.setHex(isDay ? 0x6a7285 : 0x3a4050);
-        } else if (name === "stone") {
-          basic.color.setHex(isDay ? 0x7a8092 : 0x4b5060);
-        } else if (name === "plant") {
-          basic.color.setHex(isDay ? 0x2a4a2a : 0x1a2e1a);
-        } else if (name === "trunk") {
-          basic.color.setHex(isDay ? 0x5c4a36 : 0x3d2f20);
-        } else if (name === "water") {
-          basic.color.setHex(isDay ? 0x1c2f48 : 0x0f1724);
+          sm.emissiveIntensity = isDay ? 0.2 : 1.6;
         }
-        // Apply the basic material on this mesh.
-        (mesh.material as THREE.Material) = basic;
+        // Glass reflections read stronger against a night sky.
+        if ("envMapIntensity" in sm) {
+          if (name === "glass" || name === "water") {
+            sm.envMapIntensity = isDay ? 1.2 : 1.9;
+          } else if (name === "gold" || name === "bollard") {
+            sm.envMapIntensity = isDay ? 1.5 : 2.0;
+          }
+        }
       });
     });
   }, [model, theme]);
@@ -150,15 +104,130 @@ function TowerModel({ theme }: { theme: Theme }) {
 function SceneEnv({ theme }: { theme: Theme }) {
   const { scene } = useThree();
   useEffect(() => {
-    if (theme === "day") {
-      scene.background = new THREE.Color("#6a7a94");
-      scene.fog = new THREE.FogExp2("#8fa0b8", 0.0042);
-    } else {
-      scene.background = new THREE.Color("#070710");
-      scene.fog = new THREE.FogExp2("#070710", 0.006);
-    }
+    // Load the photoreal equirectangular sky as the scene background.
+    // The sky JPEG is a full 360° equirectangular panorama rendered in Blender
+    // Cycles with physically-based atmospheric scattering.
+    const loader = new THREE.TextureLoader();
+    const url = theme === "day" ? SKY_DAY : SKY_NIGHT;
+    const fogColor = theme === "day" ? "#8fa0b8" : "#070710";
+    scene.fog = new THREE.FogExp2(fogColor, theme === "day" ? 0.0042 : 0.006);
+
+    loader.load(url, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      scene.background = tex;
+    });
+
+    return () => {
+      // Don't dispose — textures are cached by the browser for theme switching.
+      if (scene.background instanceof THREE.Texture) {
+        // Leave it; next effect run will replace it.
+      }
+    };
   }, [theme, scene]);
   return null;
+}
+
+/**
+ * Procedural image-based lighting via drei <Environment> + <Lightformer>.
+ * Generates an environment map on the GPU (no external HDR fetch) so all PBR
+ * materials — glass transmission, gold metalness, clearcoat — read with real
+ * reflections. Key is theme-bound so the env map rebuilds on day/night switch.
+ */
+function IblEnv({ theme }: { theme: Theme }) {
+  const day = theme === "day";
+  return (
+    <Environment key={theme} resolution={256} frames={1} background={false}>
+      {day ? (
+        <>
+          {/* Sky dome — soft cool diffuse from above */}
+          <Lightformer
+            form="rect"
+            intensity={2.2}
+            color="#cfe0ff"
+            position={[0, 18, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            scale={[40, 40, 1]}
+          />
+          {/* Warm sun streak from the front-right (matches key light dir) */}
+          <Lightformer
+            form="rect"
+            intensity={3.5}
+            color="#fff3df"
+            position={[28, 14, 22]}
+            rotation={[0, -Math.PI / 4, 0]}
+            scale={[18, 12, 1]}
+          />
+          {/* Cool rim from behind-left */}
+          <Lightformer
+            form="rect"
+            intensity={1.2}
+            color="#cbd6f7"
+            position={[-24, 16, -20]}
+            rotation={[0, Math.PI / 3, 0]}
+            scale={[16, 10, 1]}
+          />
+          {/* Ground bounce — warm concrete reflection */}
+          <Lightformer
+            form="rect"
+            intensity={0.6}
+            color="#9a8e78"
+            position={[0, -6, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            scale={[30, 30, 1]}
+          />
+        </>
+      ) : (
+        <>
+          {/* Night sky — deep blue dome */}
+          <Lightformer
+            form="rect"
+            intensity={0.8}
+            color="#1a2848"
+            position={[0, 18, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            scale={[40, 40, 1]}
+          />
+          {/* Moonlight — cool silver from the high right */}
+          <Lightformer
+            form="rect"
+            intensity={2.0}
+            color="#cbd6f7"
+            position={[22, 20, 18]}
+            rotation={[0, -Math.PI / 4, 0]}
+            scale={[12, 8, 1]}
+          />
+          {/* City glow — warm horizon haze from below-front */}
+          <Lightformer
+            form="rect"
+            intensity={1.8}
+            color="#ffb878"
+            position={[0, 2, 28]}
+            rotation={[0, 0, 0]}
+            scale={[30, 6, 1]}
+          />
+          {/* Warm window bounce — gold/lobby reflections */}
+          <Lightformer
+            form="rect"
+            intensity={1.0}
+            color="#ffd6a0"
+            position={[0, 8, 16]}
+            rotation={[0, 0, 0]}
+            scale={[14, 10, 1]}
+          />
+          {/* Ground bounce — dark water/plaza */}
+          <Lightformer
+            form="rect"
+            intensity={0.25}
+            color="#1c2840"
+            position={[0, -6, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            scale={[30, 30, 1]}
+          />
+        </>
+      )}
+    </Environment>
+  );
 }
 
 function CameraController({
@@ -334,13 +403,14 @@ export default function TowerScene({
       shadows
       dpr={[1, 1.9]}
       camera={{ fov: 40, near: 0.5, far: 600, position: [0, 21, 32] }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: day ? 1.05 : 1.15 }}
     >
       <SceneEnv theme={theme} />
+      <IblEnv theme={theme} />
       <CityBackdrop theme={theme} />
 
-      <ambientLight intensity={day ? 1.6 : 1.2} color={day ? "#cfe0ff" : "#9fb0d8"} />
-      <hemisphereLight args={day ? ["#cfe0ff", "#6b6253", 1.5] : ["#8fa6d8", "#2a2a35", 1.35]} />
+      <ambientLight intensity={day ? 0.35 : 0.25} color={day ? "#cfe0ff" : "#9fb0d8"} />
+      <hemisphereLight args={day ? ["#cfe0ff", "#6b6253", 0.4] : ["#8fa6d8", "#2a2a35", 0.35]} />
       {/* Key light — warm, low from the front-right to rake across the tower face */}
       <directionalLight
         position={day ? [40, 55, 45] : [22, 28, 42]}
